@@ -150,7 +150,7 @@ u8 checkIfMachineRunning()
 
 	bool running = false;
 
-	RESET_CPU_CYCLE_COUNTER
+	RESET_CPU_CYCLE_COUNTER 
 	u64 start, duration;
 	do {
 		WAIT_FOR_CPU_HALFCYCLE
@@ -693,6 +693,18 @@ extern "C" void blitScreenDOOM( unsigned char *koalaData, unsigned int *kbEvents
 
 	int supd = 0;
 
+	// raster timing of the VIC2 detected by checkForNTSC()
+	// PAL: 312 rasterlines, 63 cycles; NTSC: 262/64 (6567R56A) or 263/65 (6567R8)
+	u32 nRasterLines = 312, nCyclesPerLine = 63;
+	if ( isNTSC == 1 ) { nRasterLines = 262; nCyclesPerLine = 64; } else
+	if ( isNTSC == 2 ) { nRasterLines = 263; nCyclesPerLine = 65; }
+
+	// 7 normal lines + 1 badline (40 cycles stolen by the VIC2), PAL: 63*7+23*1=464
+	u32 nCyclesPer8Lines = nCyclesPerLine * 8 - 40;
+
+	// longest transfer that fits into the border (251..nRasterLines-1 and 0..50), PAL: 110
+	u32 nMaxBorderTransfer = nRasterLines - 202;
+
 	armCycleCounter = 0;
 	RESET_CPU_CYCLE_COUNTER 
 
@@ -716,12 +728,12 @@ extern "C" void blitScreenDOOM( unsigned char *koalaData, unsigned int *kbEvents
 	if ( curRasterLine2 >= 1 ) goto readRasterLine;
 
 	// we transfer 'totalTransfer' bytes, this will take approx. ...
-	// - cycles per 8 scanlines = 63*7+23*1=464
-	// - totalTransfer*8/464 scanlines
-	// we want to end up between 251..312 and 0..51
-	u32 scanlinesNeeded = totalTransfer * 8 / 464;
+	// - cycles per 8 scanlines = nCyclesPer8Lines
+	// - totalTransfer*8/nCyclesPer8Lines scanlines
+	// we want to end up between 251..nRasterLines and 0..51
+	u32 scanlinesNeeded = totalTransfer * 8 / nCyclesPer8Lines;
 	u32 endRasterLine = curRasterLine + scanlinesNeeded;
-	if ( endRasterLine >= 312 ) endRasterLine -= 312;
+	if ( endRasterLine >= nRasterLines ) endRasterLine -= nRasterLines;
 
 	int updMouse = 0;
 
@@ -745,7 +757,7 @@ extern "C" void blitScreenDOOM( unsigned char *koalaData, unsigned int *kbEvents
 #endif
 	}
 
-	if ( scanlinesNeeded < 110 )
+	if ( scanlinesNeeded < nMaxBorderTransfer )
 	{
 		if ( curRasterLine < 255 ) goto readRasterLine;
 	} else
@@ -754,6 +766,9 @@ extern "C" void blitScreenDOOM( unsigned char *koalaData, unsigned int *kbEvents
 	}
 
 	u16 base = ( fc & 1 ) ? 0x4000 : 0;
+
+	// padding: keeps blitterLoop at the same cache line offset as the unpatched build (gcc 10.3, Circle 45)
+	asm volatile( "nop\n\tnop\n\tnop\n\tnop\n\tnop" );
 
 	blitterLoop:
 #ifdef FASTBLIT
