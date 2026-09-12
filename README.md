@@ -1,3 +1,5 @@
+> **NTSC fork:** this repository adds NTSC raster timing to RAD-Doom v01 and documents a build that reproduces the official kernels. See **[NTSC.md](NTSC.md)** for installation, the changes and build instructions. The original README follows.
+
 <table  align="right">
 <tr><td>
 <img  align="right"  width="280"  <img  align="right"  width="280"  src="https://raw.githubusercontent.com/frntc/RAD-Doom/main/Images/RAD-Doom.jpg">

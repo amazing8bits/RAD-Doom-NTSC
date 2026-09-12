@@ -1,0 +1,73 @@
+--- a/lib/alloc.cpp
++++ b/lib/alloc.cpp
+@@ -23,6 +23,14 @@
+ #include <circle/util.h>
+ #include <assert.h>
+ 
++// RAD-Doom: free() is a no-op, matching the official RAD-Doom v01 kernel.
++// That kernel was built with a locally modified Circle 45 alloc.cpp: its
++// free() compiles to a bare "ret" and its asserts sit 8 lines further down
++// than in stock Circle (these comment lines reproduce that). Freed memory
++// is never reused; with KERNEL_MAX_SIZE = 256 MB there is plenty of heap
++// left for RAD-Doom.
++//
++
+ void *malloc (size_t nSize)
+ {
+ 	return CMemorySystem::HeapAllocate (nSize, HEAP_DEFAULT_MALLOC);
+@@ -36,7 +44,7 @@
+ 
+ void free (void *pBlock)
+ {
+-	CMemorySystem::HeapFree (pBlock);
++	//CMemorySystem::HeapFree (pBlock);
+ }
+ 
+ void *calloc (size_t nBlocks, size_t nSize)
+--- a/include/circle/sysconfig.h
++++ b/include/circle/sysconfig.h
+@@ -35,7 +35,7 @@
+ // increase this value. The value must be a multiple of 16 KByte.
+ 
+ #ifndef KERNEL_MAX_SIZE
+-#define KERNEL_MAX_SIZE		(2 * MEGABYTE)
++#define KERNEL_MAX_SIZE		(256 * MEGABYTE)
+ #endif
+ 
+ // HEAP_DEFAULT_NEW defines the default heap to be used for the "new"
+@@ -194,7 +194,7 @@
+ // by disabling some features (e.g. USB low-/full-speed device support).
+ // See doc/realtime.txt for details!
+ 
+-//#define REALTIME
++#define REALTIME
+ 
+ // USE_USB_SOF_INTR improves the compatibility with low-/full-speed
+ // USB devices. If your application uses such devices, this option
+@@ -203,6 +203,8 @@
+ // USB plug-and-play operation this option must be set in any case.
+ // This option has no influence on the Raspberry Pi 4.
+ 
++#define NO_USB_SOF_INTR
++
+ #ifndef NO_USB_SOF_INTR
+ #define USE_USB_SOF_INTR
+ #endif
+@@ -239,6 +241,8 @@
+ // this option is that the "SpeedFactor" of your system is displayed.
+ // You can reduce the time needed for booting, if you disable this.
+ 
++#define NO_CALIBRATE_DELAY
++
+ #ifndef NO_CALIBRATE_DELAY
+ #define CALIBRATE_DELAY
+ #endif
+@@ -349,6 +353,8 @@
+ 
+ #endif
+ 
++#define NO_SD_HIGH_SPEED
++
+ // SD_HIGH_SPEED enables the high-speed extensions of the SD card
+ // driver, which should result in a better performance with modern SD
+ // cards. This is not tested that widely like the standard driver, why

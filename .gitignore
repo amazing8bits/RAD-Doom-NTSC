@@ -1,0 +1,6 @@
+# build outputs
+*.o
+*.d
+Source/kernel8.*
+Source/make*.log
+ntsc/out/
