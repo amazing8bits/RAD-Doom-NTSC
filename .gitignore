@@ -4,3 +4,9 @@
 Source/kernel8.*
 Source/make*.log
 ntsc/out/
+
+# copyrighted game data: get these separately (see NTSC.md / README.md)
+*.wad
+*.WAD
+*.sf2
+*.SF2
