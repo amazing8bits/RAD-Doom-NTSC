@@ -23,7 +23,9 @@ GCC_URL=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/bin
 
 # The official kernels were built in /mnt/c/Work/Code/circle-stdlib. newlib
 # embeds its source paths (__FILE__), so the length of the tree path moves
-# data in the kernel, and RAD's C64 bus timing is sensitive to that.
+# data in the kernel. A tree of the same length keeps the layout identical to
+# the official kernels (boot tests showed layout changes are harmless, so this
+# only matters for byte-identical builds).
 TREE_LEN=30
 n=$(( TREE_LEN - ${#PARENT} - 1 ))
 if [ $n -lt 4 ]; then

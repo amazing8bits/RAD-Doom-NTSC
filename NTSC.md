@@ -39,9 +39,9 @@ The patch also adds five `nop`s. They keep the inner blit loop at the same cache
 
 ## Building
 
-RAD drives the C64 bus with cycle-exact timing from the Raspberry Pi. That timing turned out to be extremely sensitive to how the kernel is built. Kernels built with the Circle version and `sysconfig.h` from the [RAD repository](https://github.com/frntc/RAD) failed to start on real hardware: they showed a garbled blue screen or froze at the title screen.
+RAD drives the C64 bus with cycle-exact timing from the Raspberry Pi, and it turned out to be sensitive to how the kernel is built. Kernels built with the Circle version and `sysconfig.h` from the [RAD repository](https://github.com/frntc/RAD) failed on real hardware: they showed a garbled blue screen or froze at the title screen. A Circle Step45 build with RAD's settings booted at first, then failed repeatedly.
 
-The build below reproduces the official v01 kernels. The unpatched build has exactly the same size as the official kernel, and all RAD-Doom code and data sit at the same addresses. It needs:
+The build below reproduces the official v01 kernels. The unpatched build has exactly the same size as the official kernel, and all RAD-Doom code and data sit at the same addresses. It uses:
 
 - **gcc 10.3-2021.07** (`aarch64-none-elf`)
 - **circle-stdlib v15.14** with **Circle Step45** (`6a6e3758`) and **circle-newlib** `343aa586`
@@ -51,6 +51,15 @@ The build below reproduces the official v01 kernels. The unpatched build has exa
   - `NO_BUSY_WAIT` *not* set
   - a `free()` that does nothing, as in the official kernel
 - **a build tree path exactly 30 characters long**, like the author's `/mnt/c/Work/Code/circle-stdlib`. newlib embeds its source paths, so the path length shifts data in the kernel.
+
+### Which of these matter
+
+Boot tests on the NTSC C64 (5 cold boots per kernel, all successful) narrowed this down:
+
+- **The disabled `free()` is not needed.** A kernel with Circle's normal `free()` worked reliably. The patch keeps it disabled only so that the build matches the official kernel.
+- **The memory layout is not critical.** In a test kernel, extra code and data were inserted into the Doom part, the way a different game would change it. That moved everything after RAD's code, including RAD's own data, to new addresses and new positions within cache lines. The kernel worked reliably. The 30-character path only matters for a byte-identical rebuild.
+
+So the earlier failures most likely came from the Circle settings: RAD's `sysconfig.h` sets `NO_BUSY_WAIT`, a 64 MB `KERNEL_MAX_SIZE` and delay calibration. Which of the three causes the failures has not been narrowed down further, so keep the compiler, Circle version and `sysconfig.h` as listed above.
 
 `ntsc/build.sh` does all of this. It downloads the pieces, builds Circle and newlib, and builds the four kernels into `ntsc/out/`:
 
